@@ -6,7 +6,8 @@
 import numpy as np
 import tensorflow as tf
 from captchaIndentify import Captcha
-
+from utils import is_dir, get_dir
+import os
 
 class CCNN():
     def __init__(self):
@@ -19,6 +20,7 @@ class CCNN():
         self.X = tf.placeholder(tf.float32, [None, self.IMAGE_HEIGHT * self.IMAGE_WIDTH])
         self.Y = tf.placeholder(tf.float32, [None, self.MAX_CAPTCHA * self.CHAR_SET_LEN])
         self.keep_prob = tf.placeholder(tf.float32)
+        self.model_path = is_dir(get_dir()+"ckpt"+os.sep)
         self.output = self.creat_captcha_cnn()
 
     def get_weight(self, shape):
@@ -164,15 +166,15 @@ class CCNN():
                     print("第%s轮，经度为：%s" % (str(step), str(acc)))
 
                     if acc > 0.9:
-                        saver.save(sess, "./ckpt/crack_capcha.model", global_step=step)
+                        saver.save(sess, self.model_path+"capcha.model", global_step=step)
                         break
                 step += 1
 
     def crack_captcha(self, captcha_image):
-        
+
         saver = tf.train.Saver()
         with tf.Session() as sess:
-            saver.restore(sess, './ckpt/crack_capcha.model')
+            saver.restore(sess, self.model_path+'capcha.model')
             predict = tf.argmax(tf.reshape(self.output, [-1, self.MAX_CAPTCHA, self.CHAR_SET_LEN]), 2)
             text_list = sess.run(predict, feed_dict={self.X: [captcha_image], self.keep_prob: 1})
             text = text_list[0].tolist()
@@ -190,4 +192,4 @@ if __name__ == '__main__':
             text, image = captcha.get_captcha_text_and_image()
             image = ccnn.convert2gray(image).flatten() / 255
             predict_text = ccnn.vec2text(ccnn.crack_captcha(image))
-            print("正确验证码：{} 预测验证码{}".format(text,predict_text))
+            print("正确验证码：{} 预测验证码{}".format(text, predict_text))
